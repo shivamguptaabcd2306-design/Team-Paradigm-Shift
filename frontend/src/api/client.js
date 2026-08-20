@@ -32,3 +32,9 @@ export function sendChatMessage(role, messages, reports) {
     body: JSON.stringify({ role, messages, reports }),
   }).then((data) => data.reply);
 }
+export function fetchDisasterReport(reports) {
+  return request("/report", {
+    method: "POST",
+    body: JSON.stringify({ reports }),
+  }).then((data) => data.report);
+}

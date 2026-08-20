@@ -7,7 +7,7 @@ function getClient() {
     throw new Error("GEMINI_API_KEY is not set. Add your GEMINI_API_KEY in backend/.env.");
   }
   if (!client) {
-    client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY});
   }
   return client;
 }
