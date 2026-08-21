@@ -1,4 +1,5 @@
-# EODSS — Emergency Operations Decision Support System
+#DRISHTI 
+Ai Disaster Intelligence & response
 
 A dashboard + AI assistant for coordinating flood response across three
 stakeholder types (Local Authority, NGO, Emergency Team), split into a

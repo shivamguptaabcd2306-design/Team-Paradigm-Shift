@@ -6,14 +6,26 @@ import {
   LayoutDashboard,
   MessageSquare,
   FileText,
+  Radio,
+  Activity,
+  MapPin,
+  Package,
+  ShieldAlert,
+  Bell,
+  BarChart2,
+  Check,
 } from "lucide-react";
 
 import TabButton from "./components/TabButton.jsx";
 import Dashboard from "./components/Dashboard.jsx";
 import Assistant from "./components/Assistant.jsx";
 import DisasterReport from "./components/DisasterReport.jsx";
+import DisasterMap from "./components/DisasterMap.jsx";
+import ResourceOperations from "./components/ResourceOperations.jsx";
+import AlertsManager from "./components/AlertsManager.jsx";
 
 import { ROLES } from "./data/roles.js";
+import { INITIAL_ALERTS } from "./components/disasterData.js";
 import { useSituationData } from "./hooks/useSituationData.js";
 
 import {
@@ -23,21 +35,10 @@ import {
 } from "./api/client.js";
 
 export default function App() {
-  // ============================================================
-  // TAB STATE
-  // ============================================================
-
   const [activeTab, setActiveTab] = useState("dashboard");
-
-  // ============================================================
-  // CLOCK
-  // ============================================================
-
   const [now, setNow] = useState(new Date());
-
-  // ============================================================
-  // SITUATION DATA
-  // ============================================================
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadAlerts, setUnreadAlerts] = useState(INITIAL_ALERTS.length);
 
   const {
     data,
@@ -46,31 +47,18 @@ export default function App() {
     error: situationError,
   } = useSituationData();
 
-  // ============================================================
-  // AI SUMMARY
-  // ============================================================
-
   const [summary, setSummary] = useState("");
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState(false);
-
-  // ============================================================
-  // DISASTER REPORT
-  // ============================================================
 
   const [disasterReport, setDisasterReport] = useState("");
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState(false);
 
-  // ============================================================
-  // AI ASSISTANT
-  // ============================================================
-
   const [role, setRole] = useState("authority");
 
   const [conversations, setConversations] = useState(() => {
     const init = {};
-
     Object.keys(ROLES).forEach((r) => {
       init[r] = [
         {
@@ -79,35 +67,21 @@ export default function App() {
         },
       ];
     });
-
     return init;
   });
 
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
 
-  // ============================================================
-  // REFS
-  // ============================================================
-
   const feedEndRef = useRef(null);
   const chatEndRef = useRef(null);
-
-  // ============================================================
-  // CLOCK EFFECT
-  // ============================================================
 
   useEffect(() => {
     const t = setInterval(() => {
       setNow(new Date());
     }, 1000);
-
     return () => clearInterval(t);
   }, []);
-
-  // ============================================================
-  // SCROLL LIVE FEED
-  // ============================================================
 
   useEffect(() => {
     feedEndRef.current?.scrollIntoView({
@@ -115,19 +89,11 @@ export default function App() {
     });
   }, [reports]);
 
-  // ============================================================
-  // SCROLL CHAT
-  // ============================================================
-
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({
       behavior: "smooth",
     });
   }, [conversations, role, chatLoading]);
-
-  // ============================================================
-  // GENERATE AI SUMMARY
-  // ============================================================
 
   const generateSummary = useCallback(async () => {
     setSummaryLoading(true);
@@ -135,7 +101,6 @@ export default function App() {
 
     try {
       const text = await fetchSummary(reports);
-
       setSummary(text);
     } catch (e) {
       console.error("Summary generation failed:", e);
@@ -144,10 +109,6 @@ export default function App() {
       setSummaryLoading(false);
     }
   }, [reports]);
-
-  // ============================================================
-  // GENERATE DISASTER REPORT
-  // ============================================================
 
   const generateDisasterReport = useCallback(async () => {
     if (!reports || reports.length === 0) {
@@ -160,7 +121,6 @@ export default function App() {
 
     try {
       const text = await fetchDisasterReport(reports);
-
       setDisasterReport(text);
     } catch (e) {
       console.error("Disaster report generation failed:", e);
@@ -170,19 +130,11 @@ export default function App() {
     }
   }, [reports]);
 
-  // ============================================================
-  // GENERATE SUMMARY WHEN DATA LOADS
-  // ============================================================
-
   useEffect(() => {
     if (data && !summary && !summaryLoading) {
       generateSummary();
     }
   }, [data, summary, summaryLoading, generateSummary]);
-
-  // ============================================================
-  // GENERATE DISASTER REPORT WHEN REPORT TAB IS OPENED
-  // ============================================================
 
   useEffect(() => {
     if (
@@ -204,10 +156,6 @@ export default function App() {
     generateDisasterReport,
   ]);
 
-  // ============================================================
-  // AI CHAT
-  // ============================================================
-
   const sendMessage = async (text) => {
     const query = text ?? chatInput;
 
@@ -221,7 +169,6 @@ export default function App() {
     };
 
     const history = conversations[role];
-
     const nextHistory = [...history, userMsg];
 
     setConversations((prev) => ({
@@ -272,88 +219,105 @@ export default function App() {
     }
   };
 
-  // ============================================================
-  // UI
-  // ============================================================
-
   return (
-    <div className="min-h-screen w-full bg-[#0A0F1A] text-[#E7ECF5] font-sans">
+    <div className="min-h-screen w-full bg-gradient-to-br from-[#060A12] via-[#0B1324] to-[#070D18] text-[#E7ECF5] font-sans relative overflow-x-hidden">
+      {/* Background Ambient Glowing Orbs */}
+      <div className="fixed top-0 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="fixed bottom-0 right-1/4 w-[30rem] h-[30rem] bg-violet-500/10 rounded-full blur-3xl pointer-events-none" />
 
-      {/* ======================================================
-          HEADER
-      ======================================================= */}
-
-      <header className="border-b border-[#1B2434] bg-[#0D1420]/90 backdrop-blur sticky top-0 z-20">
-
-        {/* HEADER TOP */}
-
+      {/* HEADER */}
+      <header className="glass-header sticky top-0 z-30 shadow-2xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
-
-          {/* LOGO */}
-
+          {/* LOGO & TITLE */}
           <div className="flex items-center gap-3">
-
-            <div className="w-9 h-9 rounded-lg bg-cyan-500/10 ring-1 ring-cyan-500/30 flex items-center justify-center shrink-0">
-
-              <Waves
-                className="w-5 h-5 text-cyan-400"
-                strokeWidth={2}
-              />
-
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(6,182,212,0.2)]">
+              <Waves className="w-5 h-5 text-cyan-400" strokeWidth={2.2} />
             </div>
 
             <div>
-
-              <div className="text-[15px] font-semibold tracking-tight leading-none">
-                EODSS
+              <div className="flex items-center gap-2">
+                <span className="text-base font-bold tracking-tight text-white">EODSS</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-bold">
+                  SIH 2026 PROTOTYPE
+                </span>
               </div>
-
-              <div className="text-[11px] text-[#7C8AA3] leading-none mt-1 font-mono">
-                Emergency Operations Decision Support
+              <div className="text-[11px] text-[#8B96AC] font-mono mt-0.5 flex items-center gap-2">
+                <span> ai powered disiater intelliigence & response system</span>
+                <span className="text-[#3A4560]">•</span>
+                <span className="text-cyan-300 font-semibold">Gujarat Flood </span>
               </div>
-
             </div>
-
           </div>
 
-          {/* ONLINE + CLOCK */}
-
-          <div className="flex items-center gap-4 sm:gap-6">
-
-            <div className="hidden sm:flex items-center gap-1.5 text-[12px] text-[#7C8AA3] font-mono">
-
-              <Wifi className="w-3.5 h-3.5 text-emerald-400" />
-
-              <span className="text-emerald-400">
-                Online
-              </span>
-
+          {/* METRICS, SATELLITE UPDATE BADGE & NOTIFICATIONS */}
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-xs font-mono">
+              <Radio className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+              <span className="text-cyan-300 font-semibold">SATELLITE FEED: 10m ago</span>
             </div>
 
-            <div className="flex items-center gap-1.5 text-[12px] text-[#B7C0D1] font-mono tabular-nums">
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-mono">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+              <span className="text-emerald-400 font-semibold">ONLINE</span>
+            </div>
 
-              <Clock className="w-3.5 h-3.5" />
-
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#0F172A]/80 border border-white/5 text-xs text-[#B7C0D1] font-mono tabular-nums shadow-inner">
+              <Clock className="w-3.5 h-3.5 text-cyan-400" />
               {now.toLocaleTimeString("en-IN", {
                 hour: "2-digit",
                 minute: "2-digit",
                 second: "2-digit",
               })}
-
             </div>
 
-          </div>
+            {/* NOTIFICATION BELL DRAWER TOGGLE */}
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setShowNotifications(!showNotifications);
+                  setUnreadAlerts(0);
+                }}
+                className="p-2 rounded-xl bg-[#0F172A]/80 border border-white/10 text-[#B7C0D1] hover:text-white transition-colors relative"
+                title="View Emergency Notifications"
+              >
+                <Bell className="w-4 h-4 text-cyan-400" />
+                {unreadAlerts > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center animate-bounce">
+                    {unreadAlerts}
+                  </span>
+                )}
+              </button>
 
+              {/* Notification Popover Drawer */}
+              {showNotifications && (
+                <div className="absolute right-0 mt-2 w-80 bg-[#0F172A] border border-cyan-500/30 rounded-2xl p-4 shadow-2xl z-50 space-y-3 animate-fade-in text-xs">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                    <span className="font-bold text-white uppercase font-mono">Incident Alerts</span>
+                    <button onClick={() => setShowNotifications(false)} className="text-[#7C8AA3] hover:text-white">✕</button>
+                  </div>
+
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    {INITIAL_ALERTS.map((alt) => (
+                      <div key={alt.id} className="p-2.5 rounded-xl bg-[#090E1A] border border-white/5 space-y-1">
+                        <div className="flex items-center justify-between text-[11px] font-bold">
+                          <span className={alt.severity === "CRITICAL" ? "text-rose-400" : "text-amber-400"}>{alt.title}</span>
+                          <span className="text-[10px] text-[#7C8AA3] font-mono">{alt.timestamp}</span>
+                        </div>
+                        <div className="text-[11px] text-[#D5DBE8]">{alt.details}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* ==================================================
-            NAVIGATION TABS
-        =================================================== */}
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex gap-1">
-
-          {/* SITUATION DASHBOARD */}
-
+        {/* NAVIGATION TABS (6 MAIN VIEWS ACCORDING TO DRISHTI PLAN) */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-2 pt-1 flex gap-2 overflow-x-auto">
           <TabButton
             active={activeTab === "dashboard"}
             onClick={() => setActiveTab("dashboard")}
@@ -361,7 +325,12 @@ export default function App() {
             label="Situation Dashboard"
           />
 
-          {/* AI ASSISTANT */}
+          <TabButton
+            active={activeTab === "map"}
+            onClick={() => setActiveTab("map")}
+            icon={MapPin}
+            label="Live GIS Map"
+          />
 
           <TabButton
             active={activeTab === "assistant"}
@@ -370,8 +339,6 @@ export default function App() {
             label="AI Assistant"
           />
 
-          {/* DISASTER REPORT */}
-
           <TabButton
             active={activeTab === "report"}
             onClick={() => setActiveTab("report")}
@@ -379,48 +346,37 @@ export default function App() {
             label="Disaster Report"
           />
 
-        </div>
+          <TabButton
+            active={activeTab === "resources"}
+            onClick={() => setActiveTab("resources")}
+            icon={Package}
+            label="Resource Operations"
+          />
 
+          <TabButton
+            active={activeTab === "alerts"}
+            onClick={() => setActiveTab("alerts")}
+            icon={ShieldAlert}
+            label="Alerts & Directives"
+          />
+        </div>
       </header>
 
-      {/* ======================================================
-          MAIN CONTENT
-      ======================================================= */}
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-
-        {/* LOADING */}
-
+      {/* MAIN CONTENT CONTAINER */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 relative z-10">
         {loading ? (
-
-          <div className="text-[13px] text-[#7C8AA3] font-mono">
-            Loading situation data…
+          <div className="flex items-center justify-center py-24 text-xs font-mono text-[#7C8AA3]">
+            <div className="flex items-center gap-3 px-6 py-4 rounded-2xl glass-panel">
+              <Activity className="w-5 h-5 text-cyan-400 animate-spin" />
+              Fetching Operational Telemetry Grid...
+            </div>
           </div>
-
         ) : situationError || !data ? (
-
-          /* BACKEND ERROR */
-
-          <div className="text-[13px] text-rose-400 font-mono">
-
-            Couldn't reach the backend API.
-
-            Make sure the server in{" "}
-
-            <span className="text-rose-300">
-              /backend
-            </span>{" "}
-
-            is running.
-
+          <div className="p-6 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-mono space-y-2 max-w-xl mx-auto text-center">
+            <p className="font-bold text-rose-400 text-sm">Backend API Connection Unavailable</p>
+            <p>Please ensure the Node.js Express server in <code className="text-rose-200 bg-rose-900/40 px-1.5 py-0.5 rounded">/backend</code> is running on port 4000.</p>
           </div>
-
         ) : activeTab === "dashboard" ? (
-
-          /* ==================================================
-             SITUATION DASHBOARD
-          =================================================== */
-
           <Dashboard
             disasterInfo={data.disasterInfo}
             affectedLocations={data.affectedLocations}
@@ -433,13 +389,19 @@ export default function App() {
             evaluationMetrics={data.evaluationMetrics}
             timelineFrames={data.timelineFrames}
           />
-
+        ) : activeTab === "map" ? (
+          <div className="space-y-4 animate-fade-in">
+            <div className="bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-cyan-400" /> Full-Screen GIS Interactive Map Explorer
+                </h2>
+                <p className="text-xs text-[#8B96AC]">Interactive satellite change detection, building damage vectors, and blocked road segments</p>
+              </div>
+            </div>
+            <DisasterMap affectedLocations={data.affectedLocations} type="ai" />
+          </div>
         ) : activeTab === "assistant" ? (
-
-          /* ==================================================
-             AI ASSISTANT
-          =================================================== */
-
           <Assistant
             role={role}
             setRole={setRole}
@@ -452,13 +414,7 @@ export default function App() {
             sendMessage={sendMessage}
             chatEndRef={chatEndRef}
           />
-
-        ) : (
-
-          /* ==================================================
-             DISASTER REPORT
-          =================================================== */
-
+        ) : activeTab === "report" ? (
           <DisasterReport
             disasterInfo={data.disasterInfo}
             affectedLocations={data.affectedLocations}
@@ -469,11 +425,12 @@ export default function App() {
             reportError={reportError}
             onRefresh={generateDisasterReport}
           />
-
+        ) : activeTab === "resources" ? (
+          <ResourceOperations resources={data.resources} />
+        ) : (
+          <AlertsManager />
         )}
-
       </main>
-
     </div>
   );
 }
