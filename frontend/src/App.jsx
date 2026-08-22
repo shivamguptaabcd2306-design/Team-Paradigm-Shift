@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
-  Wifi,
   Clock,
   Waves,
   LayoutDashboard,
@@ -8,19 +7,19 @@ import {
   FileText,
   Radio,
   Activity,
-  MapPin,
   Package,
   ShieldAlert,
   Bell,
-  BarChart2,
-  Check,
+  MapPin,
+  Compass,
+  HeartPulse,
 } from "lucide-react";
 
 import TabButton from "./components/TabButton.jsx";
 import Dashboard from "./components/Dashboard.jsx";
+import DisasterMap from "./components/DisasterMap.jsx";
 import Assistant from "./components/Assistant.jsx";
 import DisasterReport from "./components/DisasterReport.jsx";
-import DisasterMap from "./components/DisasterMap.jsx";
 import ResourceOperations from "./components/ResourceOperations.jsx";
 import AlertsManager from "./components/AlertsManager.jsx";
 
@@ -55,7 +54,7 @@ export default function App() {
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState(false);
 
-  const [role, setRole] = useState("authority");
+  const [role, setRole] = useState("district_magistrate");
 
   const [conversations, setConversations] = useState(() => {
     const init = {};
@@ -111,16 +110,11 @@ export default function App() {
   }, [reports]);
 
   const generateDisasterReport = useCallback(async () => {
-    if (!reports || reports.length === 0) {
-      setReportError(true);
-      return;
-    }
-
     setReportLoading(true);
     setReportError(false);
 
     try {
-      const text = await fetchDisasterReport(reports);
+      const text = await fetchDisasterReport(reports || []);
       setDisasterReport(text);
     } catch (e) {
       console.error("Disaster report generation failed:", e);
@@ -137,24 +131,10 @@ export default function App() {
   }, [data, summary, summaryLoading, generateSummary]);
 
   useEffect(() => {
-    if (
-      activeTab === "report" &&
-      data &&
-      reports &&
-      reports.length > 0 &&
-      !disasterReport &&
-      !reportLoading
-    ) {
+    if (activeTab === "report" && data && !disasterReport && !reportLoading) {
       generateDisasterReport();
     }
-  }, [
-    activeTab,
-    data,
-    reports,
-    disasterReport,
-    reportLoading,
-    generateDisasterReport,
-  ]);
+  }, [activeTab, data, disasterReport, reportLoading, generateDisasterReport]);
 
   const sendMessage = async (text) => {
     const query = text ?? chatInput;
@@ -168,7 +148,7 @@ export default function App() {
       content: query.trim(),
     };
 
-    const history = conversations[role];
+    const history = conversations[role] || [];
     const nextHistory = [...history, userMsg];
 
     setConversations((prev) => ({
@@ -228,7 +208,7 @@ export default function App() {
       {/* HEADER */}
       <header className="glass-header sticky top-0 z-30 shadow-2xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
-          {/* LOGO & TITLE */}
+          {/* LOGO & REFINED DISTRICT BRANDING */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(6,182,212,0.2)]">
               <Waves className="w-5 h-5 text-cyan-400" strokeWidth={2.2} />
@@ -236,24 +216,24 @@ export default function App() {
 
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-base font-bold tracking-tight text-white">EODSS</span>
+                <span className="text-base font-bold tracking-tight text-white">GOLAGHAT DISTRICT</span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-bold">
-                  SIH 2026 PROTOTYPE
+                  DEOC • ASDMA
                 </span>
               </div>
               <div className="text-[11px] text-[#8B96AC] font-mono mt-0.5 flex items-center gap-2">
-                <span> ai powered disiater intelliigence & response system</span>
-                <span className="text-[#3A4560]">•</span>
-                <span className="text-cyan-300 font-semibold">Gujarat Flood </span>
+                <span>Emergency Operations Centre</span>
+                <span className="text-[#3A4560] hidden sm:inline">•</span>
+                <span className="text-cyan-300 font-semibold hidden sm:inline">Flood Situation Monitoring • District Level</span>
               </div>
             </div>
           </div>
 
-          {/* METRICS, SATELLITE UPDATE BADGE & NOTIFICATIONS */}
+          {/* STATUS BADGES & NOTIFICATIONS */}
           <div className="flex items-center gap-3 sm:gap-4">
             <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-xs font-mono">
-              <Radio className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-              <span className="text-cyan-300 font-semibold">SATELLITE FEED: 10m ago</span>
+              <Radio className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="text-cyan-300 font-semibold">DHANSIRI: 77.94m (MONITORED)</span>
             </div>
 
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-mono">
@@ -261,7 +241,7 @@ export default function App() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
               </span>
-              <span className="text-emerald-400 font-semibold">ONLINE</span>
+              <span className="text-emerald-400 font-semibold">DEOC ACTIVE</span>
             </div>
 
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#0F172A]/80 border border-white/5 text-xs text-[#B7C0D1] font-mono tabular-nums shadow-inner">
@@ -273,7 +253,7 @@ export default function App() {
               })}
             </div>
 
-            {/* NOTIFICATION BELL DRAWER TOGGLE */}
+            {/* NOTIFICATION BELL */}
             <div className="relative">
               <button
                 onClick={() => {
@@ -281,7 +261,7 @@ export default function App() {
                   setUnreadAlerts(0);
                 }}
                 className="p-2 rounded-xl bg-[#0F172A]/80 border border-white/10 text-[#B7C0D1] hover:text-white transition-colors relative"
-                title="View Emergency Notifications"
+                title="View Emergency Directives"
               >
                 <Bell className="w-4 h-4 text-cyan-400" />
                 {unreadAlerts > 0 && (
@@ -293,13 +273,13 @@ export default function App() {
 
               {/* Notification Popover Drawer */}
               {showNotifications && (
-                <div className="absolute right-0 mt-2 w-80 bg-[#0F172A] border border-cyan-500/30 rounded-2xl p-4 shadow-2xl z-50 space-y-3 animate-fade-in text-xs">
+                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-[#0F172A] border border-cyan-500/30 rounded-2xl p-4 shadow-2xl z-50 space-y-3 animate-fade-in text-xs">
                   <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                    <span className="font-bold text-white uppercase font-mono">Incident Alerts</span>
+                    <span className="font-bold text-white uppercase font-mono">DDMA Golaghat Directives</span>
                     <button onClick={() => setShowNotifications(false)} className="text-[#7C8AA3] hover:text-white">✕</button>
                   </div>
 
-                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                     {INITIAL_ALERTS.map((alt) => (
                       <div key={alt.id} className="p-2.5 rounded-xl bg-[#090E1A] border border-white/5 space-y-1">
                         <div className="flex items-center justify-between text-[11px] font-bold">
@@ -316,7 +296,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* NAVIGATION TABS (6 MAIN VIEWS ACCORDING TO DRISHTI PLAN) */}
+        {/* TOP NAVIGATION TABS */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-2 pt-1 flex gap-2 overflow-x-auto">
           <TabButton
             active={activeTab === "dashboard"}
@@ -328,29 +308,29 @@ export default function App() {
           <TabButton
             active={activeTab === "map"}
             onClick={() => setActiveTab("map")}
-            icon={MapPin}
-            label="Live GIS Map"
+            icon={Compass}
+            label="Operations Map"
           />
 
           <TabButton
             active={activeTab === "assistant"}
             onClick={() => setActiveTab("assistant")}
             icon={MessageSquare}
-            label="AI Assistant"
+            label="Intelligence AI"
           />
 
           <TabButton
             active={activeTab === "report"}
             onClick={() => setActiveTab("report")}
             icon={FileText}
-            label="Disaster Report"
+            label="Situation Report"
           />
 
           <TabButton
             active={activeTab === "resources"}
             onClick={() => setActiveTab("resources")}
             icon={Package}
-            label="Resource Operations"
+            label="Relief Logistics"
           />
 
           <TabButton
@@ -368,7 +348,7 @@ export default function App() {
           <div className="flex items-center justify-center py-24 text-xs font-mono text-[#7C8AA3]">
             <div className="flex items-center gap-3 px-6 py-4 rounded-2xl glass-panel">
               <Activity className="w-5 h-5 text-cyan-400 animate-spin" />
-              Fetching Operational Telemetry Grid...
+              Loading Golaghat DEOC Operational Telemetry Grid...
             </div>
           </div>
         ) : situationError || !data ? (
@@ -379,8 +359,20 @@ export default function App() {
         ) : activeTab === "dashboard" ? (
           <Dashboard
             disasterInfo={data.disasterInfo}
+            kpiCards={data.kpiCards}
+            circlesData={data.circlesData}
+            humanitarianData={data.humanitarianData}
+            housingData={data.housingData}
+            infrastructureData={data.infrastructureData}
+            agricultureData={data.agricultureData}
+            riverGaugeData={data.riverGaugeData}
+            reliefOperationsData={data.reliefOperationsData}
+            healthServicesData={data.healthServicesData}
+            hospitalsData={data.hospitalsData}
+            emergencyContactsData={data.emergencyContactsData}
+            economicLossData={data.economicLossData}
+            recoveryData={data.recoveryData}
             affectedLocations={data.affectedLocations}
-            statCards={data.statCards}
             resources={data.resources}
             summary={summary}
             summaryLoading={summaryLoading}
@@ -391,15 +383,11 @@ export default function App() {
           />
         ) : activeTab === "map" ? (
           <div className="space-y-4 animate-fade-in">
-            <div className="bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-bold text-white flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-cyan-400" /> Full-Screen GIS Interactive Map Explorer
-                </h2>
-                <p className="text-xs text-[#8B96AC]">Interactive satellite change detection, building damage vectors, and blocked road segments</p>
-              </div>
-            </div>
-            <DisasterMap affectedLocations={data.affectedLocations} type="ai" />
+            <DisasterMap
+              title="OPERATIONAL INUNDATION & INFRASTRUCTURE MAP"
+              subtitle="Full-screen GIS console: Multi-base layer switcher, NRSC Inundation SAR, CWC Gauges & Hospitals"
+              height="700px"
+            />
           </div>
         ) : activeTab === "assistant" ? (
           <Assistant
@@ -417,9 +405,18 @@ export default function App() {
         ) : activeTab === "report" ? (
           <DisasterReport
             disasterInfo={data.disasterInfo}
-            affectedLocations={data.affectedLocations}
-            statCards={data.statCards}
-            resources={data.resources}
+            circlesData={data.circlesData}
+            riverGaugeData={data.riverGaugeData}
+            humanitarianData={data.humanitarianData}
+            housingData={data.housingData}
+            infrastructureData={data.infrastructureData}
+            agricultureData={data.agricultureData}
+            reliefOperationsData={data.reliefOperationsData}
+            economicLossData={data.economicLossData}
+            recoveryData={data.recoveryData}
+            hospitalsData={data.hospitalsData}
+            emergencyContactsData={data.emergencyContactsData}
+            evaluationMetrics={data.evaluationMetrics}
             report={disasterReport}
             reportLoading={reportLoading}
             reportError={reportError}

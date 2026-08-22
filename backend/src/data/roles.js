@@ -1,22 +1,19 @@
-// Three individual operating contexts for the same underlying AI assistant.
-// Kept in sync (by key) with frontend/src/data/roles.js, which additionally
-// carries UI-only fields (icons, colors, suggestion chips).
-
+// Golaghat District Flood Emergency Operations Command Roles
 export const ROLES = {
-  authority: {
-    label: "Local Authority",
-    focus: "coordination, evacuation orders, and public safety",
-    matchesSource: "Local Authority",
+  district_magistrate: {
+    label: "District Magistrate & Chairman (DDMA Golaghat)",
+    focus: "district-wide emergency command, SDRF/NDRF boat deployments, PWD road restorations, CWC flood gauge alerts, and financial DBT assistance",
+    matchesSource: "DDMA Golaghat Control Room",
   },
-  ngo: {
-    label: "NGO",
-    focus: "relief distribution, shelter, and medical support",
-    matchesSource: "NGO Report",
+  subdivisional_officer: {
+    label: "Sub-Divisional Officer (Civil) — Bokakhat",
+    focus: "revenue circle coordination, Kaziranga NH-715 speed regulation, breached dyke repairs, and circle-level relief camps",
+    matchesSource: "SDRF Golaghat Unit 1",
   },
-  team: {
-    label: "Emergency Team",
-    focus: "search & rescue and on-ground response",
-    matchesSource: "Emergency Team",
+  relief_logistics: {
+    label: "District Relief & Health Operations Officer",
+    focus: "relief camp supplies, mobile medical doctor units, fodder depots, drinking water sanitation, and PMAY-G reconstruction audits",
+    matchesSource: "District Health Society",
   },
 };
 

@@ -5,12 +5,15 @@ import { validateSummaryBody } from "../middleware/validate.js";
 
 const router = Router();
 
-const SUMMARY_SYSTEM_PROMPT = `You are the situation-analysis module of an emergency operations dashboard. Write a single tight operational brief (2-3 sentences max, no headers, no bullet points) covering: what happened, current severity, and the single most urgent gap responders should know about right now. Be factual and plain, not dramatic.`;
+const SUMMARY_SYSTEM_PROMPT = `You are the Situation Analysis Officer at the District Emergency Operations Centre (DEOC), District Disaster Management Authority (DDMA), Golaghat, Assam.
+Write a single concise, authoritative operational brief (2-3 sentences max, no headers, no bullet points) synthesizing the current Golaghat Flood 2026 state:
+Include the district scale (1.95 lakh people affected across 5 revenue circles: Bokakhat, Golaghat, Khumtai, Dergaon, Morangi), worst-affected sectors (Bokakhat & Golaghat Sadar), Dhansiri river stage at Numaligarh (0.52m above danger level), Kaziranga NH-715 transit restriction, and current camp/relief operations (48 active camps, 16,500 inmates, ₹14.8 Cr DBT disbursed).
+Be strictly factual and grounded in the official Golaghat data provided. Never invent or hallucinate figures.`;
 
 // POST /api/summary — body: { reports: [...] }
 router.post("/", validateSummaryBody, async (req, res) => {
   try {
-    const { reports } = req.body;
+    const { reports = [] } = req.body;
     const text = await callGemini(SUMMARY_SYSTEM_PROMPT, [
       { role: "user", content: buildContextBlock(reports) },
     ]);

@@ -1,25 +1,32 @@
 import { useState } from "react";
-import { Package, Truck, ShieldAlert, CheckCircle2, AlertTriangle, Users, MapPin, Plus, Send } from "lucide-react";
-import { HOSPITALS_AND_CAMPS, FIELD_TEAMS } from "./disasterData.js";
+import { Package, Truck, ShieldAlert, CheckCircle2, AlertTriangle, Users, MapPin, Send, Anchor, Tent, Wheat, HeartPulse } from "lucide-react";
+import { GOLAGHAT_FACILITIES_GEO } from "./disasterData.js";
+
+const GOLAGHAT_FIELD_TEAMS = [
+  { id: "TEAM-GLT-01", name: "SDRF Golaghat Rescue Squad Alpha", role: "Motorized Boat Evacuation & Deep Water Rescue", members: 24, sector: "Bokakhat & Gelabil Lowlands", status: "DEPLOYED" },
+  { id: "TEAM-GLT-02", name: "NDRF 1st Battalion Task Unit", role: "Flood Inundation Search & Inmate Ferrying", members: 30, sector: "Dhansirimukh & Numaligarh", status: "DEPLOYED" },
+  { id: "TEAM-GLT-03", name: "Assam WRD Geobag Dyke Unit", role: "Bilgaon Embankment Armoring & Breach Sealing", members: 18, sector: "Dhansiri Right Bank (Bilgaon)", status: "ACTIVE" },
+  { id: "TEAM-GLT-04", name: "District Health Society Medical Fleet 1", role: "Camp Chlorination & Waterborne Disease Triage", members: 12, sector: "Bokakhat & Khumtai Relief Shelters", status: "ACTIVE" },
+  { id: "TEAM-GLT-05", name: "Assam PWD Road Restoration Crew", role: "NH-715 Shoulder Stabilization & SH-1 Clearance", members: 16, sector: "Km 92 Kaziranga & Khumtai Link", status: "DEPLOYED" },
+];
 
 export default function ResourceOperations({ resources: initialResources = [] }) {
   const [resources, setResources] = useState(
     initialResources.length > 0
       ? initialResources
       : [
-          { name: "Rescue Boats", available: 18, total: 25, unit: "units", icon: "Anchor" },
-          { name: "Evacuation Buses", available: 12, total: 30, unit: "vehicles", icon: "Bus" },
-          { name: "Emergency Ambulances", available: 8, total: 15, unit: "units", icon: "Truck" },
-          { name: "Temporary Shelter Beds", available: 2270, total: 2650, unit: "beds", icon: "Home" },
-          { name: "Food & Water Rations", available: 14200, total: 20000, unit: "kits", icon: "Package" },
-          { name: "Medical Kits", available: 850, total: 1500, unit: "kits", icon: "Heart" },
+          { name: "SDRF Rescue Boats", available: 38, total: 42, unit: "motorized boats", icon: "Anchor" },
+          { name: "Active Relief Camps", available: 48, total: 50, unit: "shelters operational", icon: "Tent" },
+          { name: "Mobile Medical Units", available: 34, total: 36, unit: "doctor teams", icon: "HeartPulse" },
+          { name: "Cattle Fodder Depots", available: 24, total: 25, unit: "depot centres", icon: "Wheat" },
+          { name: "Drinking Water Tankers", available: 16, total: 18, unit: "mobile tankers", icon: "Package" },
         ]
   );
 
   const [dispatchSuccess, setDispatchSuccess] = useState(null);
 
   const handleDispatch = (teamName, sector) => {
-    setDispatchSuccess(`Emergency Unit [${teamName}] dispatched to ${sector}!`);
+    setDispatchSuccess(`Emergency Unit [${teamName}] deployed to ${sector}!`);
     setTimeout(() => setDispatchSuccess(null), 4000);
   };
 
@@ -32,14 +39,14 @@ export default function ResourceOperations({ resources: initialResources = [] })
             <Package className="w-5 h-5 text-emerald-400" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">Resource Logistics & Field Operations</h2>
-            <p className="text-xs text-[#8B96AC]">Real-time equipment inventory, field team deployment, and shelter readiness</p>
+            <h2 className="text-lg font-bold text-white uppercase">GOLAGHAT RELIEF LOGISTICS & EMERGENCY RESPONSE FLEET</h2>
+            <p className="text-xs text-[#8B96AC]">District equipment stock, SDRF/NDRF company deployments, and shelter capacity</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="text-xs font-mono px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
-            LOGISTICS HUB ACTIVE
+            DDMA GOLAGHAT LOGISTICS HUB
           </span>
         </div>
       </div>
@@ -57,7 +64,7 @@ export default function ResourceOperations({ resources: initialResources = [] })
         <div className="lg:col-span-7 space-y-4">
           <div className="bg-[#0F172A]/80 backdrop-blur-md border border-white/10 rounded-2xl p-5 shadow-xl space-y-4">
             <h3 className="text-xs font-bold text-[#E7ECF5] uppercase tracking-wider border-b border-white/5 pb-3">
-              Equipment & Consumables Availability Stock
+              Golaghat District Emergency Supplies & Equipment Availability
             </h3>
 
             <div className="space-y-4">
@@ -73,7 +80,7 @@ export default function ResourceOperations({ resources: initialResources = [] })
                         {item.name}
                         {isLow && (
                           <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 font-bold border border-rose-500/30 flex items-center gap-1">
-                            <AlertTriangle className="w-3 h-3" /> LOW STOCK WARNING
+                            <AlertTriangle className="w-3 h-3" /> LOW RESERVE
                           </span>
                         )}
                       </span>
@@ -94,19 +101,19 @@ export default function ResourceOperations({ resources: initialResources = [] })
           {/* Shelters & Hospitals Capacity Summary */}
           <div className="bg-[#0F172A]/80 backdrop-blur-md border border-white/10 rounded-2xl p-5 shadow-xl space-y-3">
             <h3 className="text-xs font-bold text-[#E7ECF5] uppercase tracking-wider border-b border-white/5 pb-3">
-              Relief Camp & Hospital Bed Capacity
+              Major Relief Shelters & Referral Hospitals Telemetry
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {HOSPITALS_AND_CAMPS.map((hc) => (
+              {GOLAGHAT_FACILITIES_GEO.map((hc) => (
                 <div key={hc.id} className="bg-[#090E1A]/80 border border-white/5 rounded-xl p-3.5 space-y-1.5">
                   <div className="text-xs font-bold text-white truncate">{hc.name}</div>
-                  <div className="text-[11px] font-mono text-cyan-400">{hc.status}</div>
+                  <div className="text-[11px] font-mono text-cyan-400">Circle: {hc.circle}</div>
                   {hc.bedsAvailable !== undefined && (
-                    <div className="text-[11px] text-[#8B96AC]">Beds Available: <b className="text-white">{hc.bedsAvailable}</b> / {hc.bedsTotal}</div>
+                    <div className="text-[11px] text-[#8B96AC]">Emergency Beds: <b className="text-pink-400">{hc.bedsAvailable}</b> / {hc.bedsTotal}</div>
                   )}
-                  {hc.shelteredPeople !== undefined && (
-                    <div className="text-[11px] text-[#8B96AC]">Sheltered Citizens: <b className="text-white">{hc.shelteredPeople}</b> / {hc.maxCapacity}</div>
+                  {hc.inmates !== undefined && (
+                    <div className="text-[11px] text-[#8B96AC]">Sheltered Inmates: <b className="text-emerald-400">{hc.inmates}</b> / {hc.capacity}</div>
                   )}
                 </div>
               ))}
@@ -119,34 +126,34 @@ export default function ResourceOperations({ resources: initialResources = [] })
           <div className="bg-[#0F172A]/80 backdrop-blur-md border border-white/10 rounded-2xl p-5 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-white/5 pb-3">
               <h3 className="text-xs font-bold text-[#E7ECF5] uppercase tracking-wider flex items-center gap-2">
-                <Users className="w-4 h-4 text-cyan-400" /> Active Field Response Units
+                <Users className="w-4 h-4 text-cyan-400" /> Active Search & Rescue Squads
               </h3>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400">{FIELD_TEAMS.length} TEAMS</span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400">{GOLAGHAT_FIELD_TEAMS.length} SQUADS</span>
             </div>
 
             <div className="space-y-3">
-              {FIELD_TEAMS.map((team) => (
+              {GOLAGHAT_FIELD_TEAMS.map((team) => (
                 <div key={team.id} className="bg-[#090E1A]/90 border border-white/5 rounded-xl p-3.5 space-y-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-bold text-white">{team.name}</span>
                     <span className={`text-[10px] font-mono px-2 py-0.5 rounded ${
-                      team.status === "DEPLOYED" ? "bg-rose-500/20 text-rose-400" : team.status === "ACTIVE" ? "bg-cyan-500/20 text-cyan-400" : "bg-amber-500/20 text-amber-400"
+                      team.status === "DEPLOYED" ? "bg-rose-500/20 text-rose-400" : "bg-cyan-500/20 text-cyan-400"
                     }`}>
                       {team.status}
                     </span>
                   </div>
 
                   <div className="text-[11px] text-[#8B96AC]">Role: <span className="text-[#E7ECF5]">{team.role}</span></div>
-                  <div className="text-[11px] text-[#8B96AC]">Personnel: <span className="text-white font-mono">{team.members} Officers</span></div>
+                  <div className="text-[11px] text-[#8B96AC]">Rescuers: <span className="text-white font-mono">{team.members} Personnel</span></div>
                   <div className="text-[11px] text-[#8B96AC] flex items-center gap-1">
-                    <MapPin className="w-3 h-3 text-cyan-400" /> Sector: <span className="text-cyan-300">{team.sector}</span>
+                    <MapPin className="w-3 h-3 text-cyan-400" /> Operational Sector: <span className="text-cyan-300">{team.sector}</span>
                   </div>
 
                   <button
                     onClick={() => handleDispatch(team.name, team.sector)}
                     className="w-full mt-1 py-1.5 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-medium hover:bg-cyan-500/25 transition-colors flex items-center justify-center gap-1.5"
                   >
-                    <Send className="w-3 h-3" /> Re-assign / Dispatch
+                    <Send className="w-3 h-3" /> Re-assign Sector Directive
                   </button>
                 </div>
               ))}

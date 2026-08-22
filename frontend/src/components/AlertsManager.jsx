@@ -22,13 +22,14 @@ export default function AlertsManager() {
     if (!newTitle.trim()) return;
 
     const created = {
-      id: `ALT-${Math.floor(100 + Math.random() * 900)}`,
+      id: `ASDMA-ALT-${Math.floor(10 + Math.random() * 90)}`,
       title: newTitle,
       severity: newSeverity,
-      location: newLocation || "Dhemaji Command Center",
-      timestamp: "Just now",
+      location: newLocation || "ASDMA State EOC (Guwahati)",
+      timestamp: "22 Aug 2026 (Live)",
+      source: "State Emergency Operations Centre (SEOC)",
       acknowledged: false,
-      details: newDetails || "Manually broadcasted critical emergency alert.",
+      details: newDetails || "Manually broadcasted critical emergency operational directive.",
     };
 
     setAlerts([created, ...alerts]);
@@ -51,8 +52,8 @@ export default function AlertsManager() {
             <ShieldAlert className="w-5 h-5 text-rose-400" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">Emergency Alerts & Hazard Directives</h2>
-            <p className="text-xs text-[#8B96AC]">Real-time operational alerts, hazard broadcasts, and evacuation notices</p>
+            <h2 className="text-lg font-bold text-white">ASSAM FLOOD 2026 — EMERGENCY ALERTS & DIRECTIVES</h2>
+            <p className="text-xs text-[#8B96AC]">Official bulletins from ASDMA, Central Water Commission (CWC), and District DDMAs</p>
           </div>
         </div>
 
@@ -77,7 +78,7 @@ export default function AlertsManager() {
             onClick={() => setShowAddModal(true)}
             className="px-3.5 py-2 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-bold flex items-center gap-1.5 hover:bg-rose-500/30 transition-colors shadow-lg"
           >
-            <Plus className="w-4 h-4" /> Broadcast Alert
+            <Plus className="w-4 h-4" /> Broadcast EOC Directive
           </button>
         </div>
       </div>
@@ -122,11 +123,18 @@ export default function AlertsManager() {
                       </span>
                     </div>
 
-                    <div className="text-xs text-cyan-300 font-medium mt-1 flex items-center gap-1">
-                      <MapPin className="w-3 h-3 text-cyan-400" /> {alert.location}
+                    <div className="text-xs text-cyan-300 font-medium mt-1 flex items-center gap-2 flex-wrap">
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-cyan-400" /> {alert.location}
+                      </span>
+                      {alert.source && (
+                        <span className="text-[10.5px] font-mono text-[#7C8AA3]">
+                          [Source: {alert.source}]
+                        </span>
+                      )}
                     </div>
 
-                    <p className="text-xs text-[#D5DBE8] mt-2 leading-relaxed">{alert.details}</p>
+                    <p className="text-xs text-[#D5DBE8] mt-2 leading-relaxed">{alert.details || alert.description}</p>
                   </div>
                 </div>
 
@@ -152,16 +160,16 @@ export default function AlertsManager() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
           <div className="bg-[#0F172A] border border-rose-500/40 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
             <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <ShieldAlert className="w-5 h-5 text-rose-400" /> Broadcast Emergency Alert
+              <ShieldAlert className="w-5 h-5 text-rose-400" /> Issue State EOC Operational Directive
             </h3>
 
             <form onSubmit={handleCreateAlert} className="space-y-3.5 text-xs">
               <div>
-                <label className="block text-[#8B96AC] mb-1 font-mono">ALERT TITLE</label>
+                <label className="block text-[#8B96AC] mb-1 font-mono">DIRECTIVE TITLE</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Flash Flood Warning at Sector 2"
+                  placeholder="e.g. Flash Flood Evacuation Notice — Kopili River Basin"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   className="w-full bg-[#090E1A] border border-white/10 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-rose-500/50"
@@ -183,10 +191,10 @@ export default function AlertsManager() {
                 </div>
 
                 <div>
-                  <label className="block text-[#8B96AC] mb-1 font-mono">LOCATION</label>
+                  <label className="block text-[#8B96AC] mb-1 font-mono">DISTRICT / LOCATION</label>
                   <input
                     type="text"
-                    placeholder="e.g. Dhemaji Railway Line"
+                    placeholder="e.g. Sivasagar & Charaideo"
                     value={newLocation}
                     onChange={(e) => setNewLocation(e.target.value)}
                     className="w-full bg-[#090E1A] border border-white/10 rounded-xl px-3 py-2 text-white focus:outline-none"
@@ -195,10 +203,10 @@ export default function AlertsManager() {
               </div>
 
               <div>
-                <label className="block text-[#8B96AC] mb-1 font-mono">DETAILS / ACTION DIRECTIVE</label>
+                <label className="block text-[#8B96AC] mb-1 font-mono">OPERATIONAL DETAILS / DIRECTIVES</label>
                 <textarea
                   rows="3"
-                  placeholder="Describe emergency directive or evacuation guidance..."
+                  placeholder="Specific tasking directives for SDRF, DDMA, or camp logistics..."
                   value={newDetails}
                   onChange={(e) => setNewDetails(e.target.value)}
                   className="w-full bg-[#090E1A] border border-white/10 rounded-xl px-3 py-2 text-white focus:outline-none"
@@ -217,7 +225,7 @@ export default function AlertsManager() {
                   type="submit"
                   className="px-4 py-2 rounded-xl bg-rose-500 text-white font-bold hover:bg-rose-600 shadow-lg"
                 >
-                  Broadcast Alert
+                  Issue Directive
                 </button>
               </div>
             </form>

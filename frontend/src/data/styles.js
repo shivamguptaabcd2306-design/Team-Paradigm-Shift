@@ -8,8 +8,11 @@ export const SEVERITY_STYLES = {
 export const ACCENT_STYLES = {
   rose: { bar: "bg-rose-500", chip: "bg-rose-500/10 text-rose-400" },
   orange: { bar: "bg-orange-500", chip: "bg-orange-500/10 text-orange-400" },
+  amber: { bar: "bg-amber-500", chip: "bg-amber-500/10 text-amber-400" },
   cyan: { bar: "bg-cyan-500", chip: "bg-cyan-500/10 text-cyan-400" },
+  blue: { bar: "bg-blue-500", chip: "bg-blue-500/10 text-blue-400" },
   violet: { bar: "bg-violet-500", chip: "bg-violet-500/10 text-violet-400" },
+  emerald: { bar: "bg-emerald-500", chip: "bg-emerald-500/10 text-emerald-400" },
 };
 
 export const ROLE_ACCENT = {
@@ -18,9 +21,28 @@ export const ROLE_ACCENT = {
   orange: { text: "text-orange-400", bg: "bg-orange-500/10", ring: "ring-orange-500/30", activeBg: "bg-orange-500/15", border: "border-orange-500/40" },
 };
 
-// Maps the icon name strings that come back from the backend (see
-// backend/src/data/situation.js) to the actual lucide-react components.
-import { Activity, AlertTriangle, Users, Truck, Ship, HeartPulse, Droplet, Package, Home } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  Users,
+  Truck,
+  Ship,
+  HeartPulse,
+  Droplet,
+  Package,
+  Home,
+  ShieldAlert,
+  MapPin,
+  Building2,
+  Route,
+  Anchor,
+  Wheat,
+  Tent,
+  Coins,
+  CheckCircle,
+  Droplets,
+  Cross,
+} from "lucide-react";
 
 export const ICON_MAP = {
   Activity,
@@ -32,4 +54,15 @@ export const ICON_MAP = {
   Droplet,
   Package,
   Home,
+  ShieldAlert,
+  MapPin,
+  Building2,
+  Route,
+  Anchor,
+  Wheat,
+  Tent,
+  Coins,
+  CheckCircle,
+  Droplets,
+  Cross,
 };

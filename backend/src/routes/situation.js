@@ -1,6 +1,21 @@
 import { Router } from "express";
 import {
   disasterInfo,
+  kpiCards,
+  circlesData,
+  humanitarianData,
+  housingData,
+  infrastructureData,
+  agricultureData,
+  riverGaugeData,
+  reliefOperationsData,
+  healthServicesData,
+  hospitalsData,
+  emergencyContactsData,
+  economicLossData,
+  recoveryData,
+  timelineData,
+  alertsData,
   affectedLocations,
   statCards,
   resources,
@@ -8,15 +23,29 @@ import {
   incomingQueue,
   evaluationMetrics,
   timelineFrames,
-  evacuationRoutes,
 } from "../data/situation.js";
 
 const router = Router();
 
-// GET /api/situation — everything the dashboard needs to render on load.
+// GET /api/situation — returns the complete official Golaghat District Flood 2026 dataset
 router.get("/", (req, res) => {
   res.json({
     disasterInfo,
+    kpiCards,
+    circlesData,
+    humanitarianData,
+    housingData,
+    infrastructureData,
+    agricultureData,
+    riverGaugeData,
+    reliefOperationsData,
+    healthServicesData,
+    hospitalsData,
+    emergencyContactsData,
+    economicLossData,
+    recoveryData,
+    timelineData,
+    alertsData,
     affectedLocations,
     statCards,
     resources,
@@ -24,7 +53,6 @@ router.get("/", (req, res) => {
     incomingQueue,
     evaluationMetrics,
     timelineFrames,
-    evacuationRoutes,
   });
 });
 

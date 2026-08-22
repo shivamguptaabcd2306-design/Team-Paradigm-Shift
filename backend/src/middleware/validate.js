@@ -27,8 +27,8 @@ export function validateChatBody(req, res, next) {
   if (!Array.isArray(messages) || messages.some((m) => !m || typeof m.content !== "string" || !["user", "assistant"].includes(m.role))) {
     return res.status(400).json({ error: "Body must include a 'messages' array of {role, content}." });
   }
-  if (!isReportsArray(reports)) {
-    return res.status(400).json({ error: "Body must include a 'reports' array of {source, location, time, message}." });
+  if (reports !== undefined && !isReportsArray(reports)) {
+    return res.status(400).json({ error: "If provided, 'reports' must be an array of {source, location, time, message}." });
   }
   next();
 }

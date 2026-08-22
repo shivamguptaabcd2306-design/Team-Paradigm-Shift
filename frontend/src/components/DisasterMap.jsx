@@ -1,59 +1,83 @@
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Layers, Eye, MapPin, ShieldAlert, Cross, Tent, Truck } from "lucide-react";
+import {
+  Layers,
+  Eye,
+  MapPin,
+  ShieldAlert,
+  Tent,
+  Cross,
+  Activity,
+  Route,
+  Info,
+  Maximize2,
+  Minimize2,
+  RotateCcw,
+  Compass,
+  Radio,
+  Satellite,
+  Clock,
+  HeartPulse,
+} from "lucide-react";
 
 import {
-  DHEMAJI_CENTER,
-  PRE_DISASTER_REGION,
-  POST_DISASTER_REGION,
-  AI_CLASSIFIED_REGIONS,
-  BUILDINGS,
-  ROADS,
-  FLOOD_ZONES,
-  HOSPITALS_AND_CAMPS,
-} from "./disasterData";
-
-function getBuildingColor(damage) {
-  switch (damage) {
-    case "SEVERE": return "#ef4444";
-    case "HIGH": return "#f97316";
-    case "MODERATE": return "#eab308";
-    case "LOW": return "#22c55e";
-    default: return "#64748b";
-  }
-}
-
-function getRoadColor(status) {
-  switch (status) {
-    case "BLOCKED": return "#ef4444";
-    case "PARTIALLY_BLOCKED": return "#f97316";
-    case "OPEN": return "#22c55e";
-    default: return "#64748b";
-  }
-}
+  GOLAGHAT_CENTER,
+  GOLAGHAT_DEFAULT_ZOOM,
+  BASE_LAYERS,
+  GOLAGHAT_DISTRICT_BOUNDARY,
+  GOLAGHAT_RIVERS,
+  GOLAGHAT_CIRCLES_GEO,
+  GOLAGHAT_GAUGES_GEO,
+  GOLAGHAT_ROADS_GEO,
+  GOLAGHAT_FACILITIES_GEO,
+  GOLAGHAT_HOSPITALS,
+  GOLAGHAT_DEFENSES_GEO,
+  GOLAGHAT_INUNDATION_ZONES,
+} from "./disasterData.js";
 
 export default function DisasterMap({
-  title = "TACTICAL GIS DISASTER INUNDATION MAP",
-  type: initialType = "ai",
-  affectedLocations = [],
-  missingDataMode = false,
+  title = "OPERATIONAL INUNDATION & INFRASTRUCTURE MAP",
+  subtitle = "Golaghat District GIS: Revenue Circles, Dhansiri Gauges, NH-715 Corridor, Hospitals & Relief Shelters",
+  height = "560px",
 }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
+  const tileLayerRef = useRef(null);
 
-  const [mapMode, setMapMode] = useState(initialType);
+  const [activeBaseLayer, setActiveBaseLayer] = useState("dark");
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [mouseCoords, setMouseCoords] = useState({ lat: 26.5200, lng: 93.9700 });
+  const [selectedCircle, setSelectedCircle] = useState("all");
+
   const [layers, setLayers] = useState({
-    buildings: true,
+    inundation: true,
+    rivers: true,
+    gauges: true,
+    circles: true,
     roads: true,
-    flood: true,
-    telemetry: true,
-    campsAndHospitals: true,
+    facilities: true,
+    hospitals: true,
+    defenses: true,
   });
 
   const toggleLayer = (layerName) => {
     setLayers((prev) => ({ ...prev, [layerName]: !prev[layerName] }));
   };
+
+  const handleResetView = () => {
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.setView(GOLAGHAT_CENTER, GOLAGHAT_DEFAULT_ZOOM, {
+        animate: true,
+      });
+    }
+  };
+
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+  };
+
+  const activeLayerCount = Object.values(layers).filter(Boolean).length;
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -64,168 +88,155 @@ export default function DisasterMap({
     }
 
     const map = L.map(mapRef.current, {
-      center: DHEMAJI_CENTER,
-      zoom: 12,
-      zoomControl: true,
+      center: GOLAGHAT_CENTER,
+      zoom: GOLAGHAT_DEFAULT_ZOOM,
+      zoomControl: false,
+      scrollWheelZoom: true,
     });
 
     mapInstanceRef.current = map;
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      maxZoom: 19,
+    // Add scale bar
+    L.control.scale({ imperial: false, position: "bottomleft" }).addTo(map);
+
+    // Track mouse coordinates
+    map.on("mousemove", (e) => {
+      setMouseCoords({
+        lat: Number(e.latlng.lat.toFixed(4)),
+        lng: Number(e.latlng.lng.toFixed(4)),
+      });
+    });
+
+    // Base Layer Initialization
+    const baseConfig = BASE_LAYERS[activeBaseLayer] || BASE_LAYERS.dark;
+    tileLayerRef.current = L.tileLayer(baseConfig.url, {
+      attribution: baseConfig.attribution,
+      maxZoom: baseConfig.maxZoom || 19,
+      subdomains: baseConfig.subdomains || "abc",
     }).addTo(map);
 
-    const allLayers = [];
+    // 1. GOLAGHAT DISTRICT OUTER BOUNDARY
+    const districtPolygon = L.polygon(GOLAGHAT_DISTRICT_BOUNDARY, {
+      color: "#22d3ee",
+      weight: 2,
+      dashArray: "6, 6",
+      fillColor: "#0284c7",
+      fillOpacity: 0.05,
+    }).addTo(map);
+    districtPolygon.bindTooltip("Golaghat District Boundary", { sticky: true });
 
-    // PRE DISASTER BASELINE REGION
-    if (mapMode === "pre" || mapMode === "ai") {
-      const polygon = L.polygon(PRE_DISASTER_REGION, {
-        color: "#22c55e",
-        weight: 2,
-        fillColor: "#22c55e",
-        fillOpacity: mapMode === "pre" ? 0.35 : 0.1,
-      }).addTo(map);
-
-      polygon.bindPopup(`
-        <div style="min-width:180px;">
-          <b style="color:#22c55e;">PRE-DISASTER BASELINE REGION</b><br/>
-          <span>Baseline geographical extent prior to inundation event.</span>
-        </div>
-      `);
-      polygon.bindTooltip("Pre-disaster Baseline");
-      allLayers.push(polygon);
-    }
-
-    // POST DISASTER FLOODED REGION
-    if (mapMode === "post" || mapMode === "ai") {
-      const polygon = L.polygon(POST_DISASTER_REGION, {
-        color: "#ef4444",
-        weight: 3,
-        fillColor: "#ef4444",
-        fillOpacity: mapMode === "post" ? 0.4 : 0.15,
-      }).addTo(map);
-
-      polygon.bindPopup(`
-        <div style="min-width:180px;">
-          <b style="color:#ef4444;">POST-DISASTER FLOODED REGION</b><br/>
-          <span>Satellite-detected inundation boundary.</span>
-        </div>
-      `);
-      polygon.bindTooltip("Post-disaster Affected Region");
-      allLayers.push(polygon);
-    }
-
-    // FLOOD EXTENT POLYGONS
-    if (layers.flood && (mapMode === "post" || mapMode === "ai")) {
-      FLOOD_ZONES.forEach((zone) => {
-        const floodPoly = L.polygon(zone.coordinates, {
-          color: "#38bdf8",
-          weight: 2,
-          fillColor: "#38bdf8",
-          fillOpacity: 0.35,
-        }).addTo(map);
-
-        floodPoly.bindPopup(`
-          <div style="min-width:180px;">
-            <b style="color:#38bdf8;">${zone.name}</b><br/>
-            <span>AI Flood Confidence: <b>${(zone.confidence * 100).toFixed(1)}%</b></span>
-          </div>
-        `);
-        allLayers.push(floodPoly);
-      });
-    }
-
-    // AI CLASSIFIED SEVERITY ZONES
-    if (mapMode === "ai") {
-      AI_CLASSIFIED_REGIONS.forEach((region) => {
-        const poly = L.polygon(region.coordinates, {
-          color: region.color,
-          weight: 2,
-          fillColor: region.color,
-          fillOpacity: 0.2,
-        }).addTo(map);
-
-        poly.bindPopup(`<b>${region.name} SEVERITY ZONE</b><br/>AI Classified hazard risk area.`);
-        allLayers.push(poly);
-      });
-    }
-
-    // BUILDINGS DAMAGE POLYGONS
-    if (layers.buildings && mapMode === "ai") {
-      BUILDINGS.forEach((b) => {
-        const color = getBuildingColor(b.damage);
-        const poly = L.polygon(b.coordinates, {
-          color: color,
-          weight: 2,
-          fillColor: color,
-          fillOpacity: 0.8,
+    // 2. INUNDATION EXTENT LAYER (NRSC / ISRO SATELLITE DERIVED)
+    if (layers.inundation) {
+      GOLAGHAT_INUNDATION_ZONES.forEach((zone) => {
+        const poly = L.polygon(zone.polygon, {
+          color: zone.color,
+          weight: 1.5,
+          fillColor: zone.color,
+          fillOpacity: zone.fillOpacity,
         }).addTo(map);
 
         poly.bindPopup(`
-          <div style="min-width:200px; font-family:sans-serif; color:#1e293b;">
-            <div style="font-weight:bold; font-size:14px; margin-bottom:4px; border-bottom:1px solid #cbd5e1; padding-bottom:3px;">
-              ${b.name} (${b.id})
+          <div style="min-width:220px; font-family:sans-serif; color:#0f172a; line-height:1.4;">
+            <div style="font-weight:bold; font-size:13px; color:${zone.color}; border-bottom:1px solid #cbd5e1; padding-bottom:3px; margin-bottom:4px;">
+              ${zone.name}
             </div>
-            <div style="margin-bottom:4px;">
-              <b>Damage Level:</b> <span style="color:${color}; font-weight:bold;">${b.damage}</span>
-            </div>
-            <div style="margin-bottom:4px;">
-              <b>AI Confidence:</b> ${(b.confidence * 100).toFixed(1)}%
-            </div>
-            <div style="margin-bottom:4px;">
-              <b>Emergency Priority:</b> <span style="font-size:11px; background:#f1f5f9; padding:2px 4px; border-radius:3px;">${b.priority}</span>
-            </div>
-            <div>
-              <b>Assigned Inspector:</b> ${b.inspectors}
+            <div style="font-size:11.5px;"><b>Observation Agency:</b> ${zone.source}</div>
+            <div style="font-size:11.5px;"><b>Satellite Sensor:</b> ${zone.satellite}</div>
+            <div style="font-size:11.5px;"><b>Observation Time:</b> ${zone.observation}</div>
+            <div style="font-size:11px; color:#b91c1c; margin-top:2px;"><b>Status:</b> ${zone.status}</div>
+            <div style="font-size:10px; color:#64748b; margin-top:4px; border-top:1px dashed #e2e8f0; padding-top:2px;">
+              Limitation: Satellite SAR observation may contain standing rainwater.
             </div>
           </div>
         `);
-        poly.bindTooltip(`${b.id} — ${b.damage}`);
-        allLayers.push(poly);
+        poly.bindTooltip(zone.name, { sticky: true });
       });
     }
 
-    // ROADS STATUS POLYLINES
-    if (layers.roads && mapMode === "ai") {
-      ROADS.forEach((r) => {
-        const color = getRoadColor(r.status);
-        const line = L.polyline(r.coordinates, {
-          color: color,
-          weight: 7,
+    // 3. REVENUE CIRCLES LAYER (ADMINISTRATIVE HIERARCHY)
+    if (layers.circles) {
+      const filteredCircles =
+        selectedCircle === "all"
+          ? GOLAGHAT_CIRCLES_GEO
+          : GOLAGHAT_CIRCLES_GEO.filter((c) => c.circle.includes(selectedCircle));
+
+      filteredCircles.forEach((c) => {
+        const isCritical = c.severity === "Critical";
+        const color = isCritical ? "#ef4444" : c.severity === "High" ? "#f97316" : "#eab308";
+
+        if (c.polygon) {
+          const poly = L.polygon(c.polygon, {
+            color: color,
+            weight: 1.5,
+            fillColor: color,
+            fillOpacity: 0.12,
+          }).addTo(map);
+
+          poly.bindTooltip(`<b>${c.circle}</b><br/>${(c.populationAffected / 1000).toFixed(1)}K affected`, {
+            sticky: true,
+          });
+        }
+
+        const marker = L.circleMarker(c.center, {
+          radius: Math.max(12, Math.min(24, Math.sqrt(c.populationAffected / 120))),
+          fillColor: color,
+          color: "#ffffff",
+          weight: 2,
           opacity: 0.95,
+          fillOpacity: 0.7,
         }).addTo(map);
 
-        line.bindPopup(`
-          <div style="min-width:220px; font-family:sans-serif; color:#1e293b;">
-            <div style="font-weight:bold; font-size:14px; margin-bottom:4px; border-bottom:1px solid #cbd5e1; padding-bottom:3px;">
-              ${r.name} (${r.id})
+        marker.bindPopup(`
+          <div style="min-width:230px; font-family:sans-serif; color:#0f172a; line-height:1.4;">
+            <div style="font-weight:bold; font-size:13.5px; color:${color}; border-bottom:1px solid #cbd5e1; padding-bottom:3px; margin-bottom:4px;">
+              ${c.circle}
             </div>
-            <div style="margin-bottom:4px;">
-              <b>Road Status:</b> <span style="color:${color}; font-weight:bold;">${r.status}</span>
-            </div>
-            <div style="margin-bottom:4px;">
-              <b>Blocked Length:</b> ${r.lengthBlocked}
-            </div>
-            <div style="margin-bottom:4px;">
-              <b>Obstruction:</b> ${r.obstructionType}
-            </div>
-            <div>
-              <b>Routing Priority:</b> <span style="font-size:11px; background:#f1f5f9; padding:2px 4px; border-radius:3px;">${r.priority}</span>
+            <div style="font-size:11.5px;"><b>Sub-division:</b> ${c.subdivision}</div>
+            <div style="font-size:11.5px;"><b>Population Affected:</b> ${c.populationAffected.toLocaleString()} (${c.familiesAffected.toLocaleString()} families)</div>
+            <div style="font-size:11.5px;"><b>Villages Submerged:</b> ${c.villagesAffected}</div>
+            <div style="font-size:11.5px;"><b>Casualties:</b> ${c.deaths} confirmed</div>
+            <div style="font-size:11.5px;"><b>Houses Damaged:</b> ${c.housesDamaged.toLocaleString()}</div>
+            <div style="font-size:11.5px;"><b>Crop Area Hit:</b> ${c.cropAreaHa.toLocaleString()} ha</div>
+            <div style="font-size:11.5px;"><b>Active Relief Camps:</b> ${c.reliefCamps} (${c.campInmates.toLocaleString()} inmates)</div>
+            <div style="font-size:11.5px; color:#475569; margin-top:2px;"><b>Situation:</b> ${c.status}</div>
+            <div style="font-size:10px; color:#64748b; margin-top:4px; border-top:1px dashed #e2e8f0; padding-top:2px;">
+              Source: ${c.source} | Date: 22 Aug 2026
             </div>
           </div>
         `);
-        line.bindTooltip(`${r.name} — ${r.status}`);
-        allLayers.push(line);
       });
     }
 
-    // HOSPITALS & RELIEF CAMPS MARKERS
-    if (layers.campsAndHospitals) {
-      HOSPITALS_AND_CAMPS.forEach((item) => {
-        const isHospital = item.type === "HOSPITAL";
-        const markerColor = isHospital ? "#ec4899" : item.type === "RELIEF_CAMP" ? "#10b981" : "#8b5cf6";
-        const marker = L.circleMarker(item.coords, {
+    // 4. RIVERS LAYER
+    if (layers.rivers) {
+      GOLAGHAT_RIVERS.forEach((river) => {
+        const polyline = L.polyline(river.coordinates, {
+          color: river.color,
+          weight: river.weight,
+          opacity: 0.9,
+          dashArray: river.status.includes("Above") ? "6, 4" : undefined,
+        }).addTo(map);
+
+        polyline.bindPopup(`
+          <div style="min-width:200px; font-family:sans-serif; color:#0f172a;">
+            <div style="font-weight:bold; font-size:13px; color:${river.color}; border-bottom:1px solid #cbd5e1; padding-bottom:3px;">
+              ${river.name}
+            </div>
+            <div style="font-size:12px; margin-top:4px;"><b>Hydrological Status:</b> ${river.status}</div>
+            <div style="font-size:10.5px; color:#64748b; margin-top:2px;">Agency: CWC & Assam WRD (Dhansiri Division)</div>
+          </div>
+        `);
+        polyline.bindTooltip(river.name, { sticky: true });
+      });
+    }
+
+    // 5. CWC & WRD RIVER GAUGES LAYER
+    if (layers.gauges) {
+      GOLAGHAT_GAUGES_GEO.forEach((g) => {
+        const isAbove = g.status.includes("ABOVE");
+        const markerColor = isAbove ? "#dc2626" : "#0284c7";
+
+        const marker = L.circleMarker(g.coords, {
           radius: 9,
           fillColor: markerColor,
           color: "#ffffff",
@@ -235,202 +246,387 @@ export default function DisasterMap({
         }).addTo(map);
 
         marker.bindPopup(`
-          <div style="min-width:210px; font-family:sans-serif; color:#1e293b;">
-            <div style="font-weight:bold; font-size:14px; color:${markerColor}; border-bottom:1px solid #cbd5e1; padding-bottom:3px; margin-bottom:4px;">
-              ${item.name}
+          <div style="min-width:215px; font-family:sans-serif; color:#0f172a; line-height:1.4;">
+            <div style="font-weight:bold; font-size:13px; color:${markerColor}; border-bottom:1px solid #cbd5e1; padding-bottom:3px; margin-bottom:4px;">
+              ${g.station}
             </div>
-            <div><b>Type:</b> ${item.type}</div>
-            <div><b>Status:</b> ${item.status}</div>
-            ${item.bedsAvailable !== undefined ? `<div><b>Available Beds:</b> ${item.bedsAvailable}/${item.bedsTotal}</div>` : ""}
-            ${item.shelteredPeople !== undefined ? `<div><b>Sheltered Citizens:</b> ${item.shelteredPeople}/${item.maxCapacity}</div>` : ""}
-            ${item.foodStockDays !== undefined ? `<div><b>Food Rations:</b> ${item.foodStockDays} days remaining</div>` : ""}
+            <div style="font-size:12px;"><b>River & Circle:</b> ${g.river} (${g.circle})</div>
+            <div style="font-size:12px;"><b>Current Water Level:</b> <span style="font-weight:bold; color:${markerColor}; font-size:13px;">${g.level.toFixed(2)} m</span></div>
+            <div style="font-size:12px;"><b>Danger Level:</b> ${g.danger.toFixed(2)} m</div>
+            <div style="font-size:12px;"><b>Highest Flood Level (HFL):</b> ${g.hfl.toFixed(2)} m</div>
+            <div style="font-size:12px;"><b>Trend:</b> <span style="font-weight:bold;">${g.trend}</span></div>
+            <div style="font-size:12px; color:${isAbove ? "#dc2626" : "#0284c7"}; font-weight:bold;">${g.status}</div>
+            <div style="font-size:10px; color:#64748b; margin-top:4px; border-top:1px dashed #e2e8f0; padding-top:2px;">
+              Agency: ${g.agency} | Obs: ${g.lastObs}
+            </div>
           </div>
         `);
-        allLayers.push(marker);
+        marker.bindTooltip(`Gauge: ${g.station} (${g.level}m)`);
       });
     }
 
-    // TELEMETRY STATIONS MARKERS
-    if (layers.telemetry && affectedLocations.length > 0) {
-      affectedLocations.forEach((loc) => {
-        if (loc.coords) {
-          const marker = L.circleMarker(loc.coords, {
-            radius: 8,
-            fillColor: missingDataMode ? "#f43f5e" : "#06b6d4",
-            color: "#ffffff",
-            weight: 2,
-            opacity: 1,
-            fillOpacity: 0.9,
-          }).addTo(map);
+    // 6. ROADS & CONNECTIVITY STATUS LAYER
+    if (layers.roads) {
+      GOLAGHAT_ROADS_GEO.forEach((road) => {
+        const polyline = L.polyline(road.coords, {
+          color: road.color,
+          weight: road.status === "RESTRICTED" || road.status === "CLOSED" ? 5 : 4,
+          opacity: 0.95,
+          dashArray: road.status === "RESTRICTED" ? "8, 6" : road.status === "CLOSED" ? "4, 6" : undefined,
+        }).addTo(map);
 
-          marker.bindPopup(`
-            <div style="min-width:180px;">
-              <b>${loc.name} Gauge Station</b><br/>
-              <b>Status:</b> ${loc.severity}<br/>
-              <p style="margin-top:4px; font-size:12px; color:#475569;">${loc.note}</p>
+        polyline.bindPopup(`
+          <div style="min-width:210px; font-family:sans-serif; color:#0f172a; line-height:1.4;">
+            <div style="font-weight:bold; font-size:13px; color:${road.color}; border-bottom:1px solid #cbd5e1; padding-bottom:3px; margin-bottom:4px;">
+              ${road.name}
             </div>
-          `);
-          allLayers.push(marker);
-        }
+            <div style="font-size:12px;"><b>Category:</b> ${road.category}</div>
+            <div style="font-size:12px;"><b>Operational Status:</b> <span style="font-weight:bold; color:${road.color};">${road.status}</span></div>
+            <div style="font-size:12px;"><b>Connectivity:</b> ${road.connectivity}</div>
+            <div style="font-size:11.5px; margin-top:2px; color:#475569;"><b>Details:</b> ${road.details}</div>
+            <div style="font-size:10px; color:#64748b; margin-top:4px; border-top:1px dashed #e2e8f0; padding-top:2px;">
+              Source: Assam PWD (Golaghat Roads Division)
+            </div>
+          </div>
+        `);
+        polyline.bindTooltip(`${road.name}: ${road.status}`, { sticky: true });
       });
     }
 
-    if (allLayers.length > 0) {
-      const group = L.featureGroup(allLayers);
-      map.fitBounds(group.getBounds(), { padding: [30, 30] });
+    // 7. RELIEF CAMPS LAYER
+    if (layers.facilities) {
+      GOLAGHAT_FACILITIES_GEO.filter((f) => f.type === "RELIEF_CAMP").forEach((item) => {
+        const color = "#10b981";
+
+        const marker = L.circleMarker(item.coords, {
+          radius: 7,
+          fillColor: color,
+          color: "#ffffff",
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0.9,
+        }).addTo(map);
+
+        marker.bindPopup(`
+          <div style="min-width:215px; font-family:sans-serif; color:#0f172a; line-height:1.4;">
+            <div style="font-weight:bold; font-size:13px; color:${color}; border-bottom:1px solid #cbd5e1; padding-bottom:3px; margin-bottom:3px;">
+              ${item.name}
+            </div>
+            <div style="font-size:11.5px;"><b>Circle:</b> ${item.circle}</div>
+            <div style="font-size:11.5px;"><b>Type:</b> Active Flood Relief Shelter</div>
+            <div style="font-size:11.5px;"><b>Inmates Sheltered:</b> <span style="font-weight:bold; color:#10b981;">${item.inmates}</span> / ${item.capacity} capacity</div>
+            <div style="font-size:11px; color:#0284c7;"><b>Drinking Water:</b> ${item.drinkingWater}</div>
+            <div style="font-size:10px; color:#64748b; margin-top:4px; border-top:1px dashed #e2e8f0; padding-top:2px;">
+              Authority: ${item.authority || "DDMA Golaghat"}
+            </div>
+          </div>
+        `);
+      });
+    }
+
+    // 8. HOSPITALS & HEALTH CENTRES LAYER
+    if (layers.hospitals) {
+      GOLAGHAT_HOSPITALS.forEach((hosp) => {
+        const color = "#ec4899";
+
+        // Estimate coords if not explicitly present
+        const coords =
+          hosp.id === "HOSP-01"
+            ? [26.5150, 93.9740]
+            : hosp.id === "HOSP-02"
+            ? [26.5820, 93.6080]
+            : hosp.id === "HOSP-03"
+            ? [26.1800, 93.8100]
+            : hosp.id === "HOSP-04"
+            ? [26.6980, 93.9720]
+            : hosp.id === "HOSP-05"
+            ? [26.6340, 93.8820]
+            : hosp.id === "HOSP-06"
+            ? [26.6120, 93.7650]
+            : hosp.id === "HOSP-07"
+            ? [26.4200, 93.8200]
+            : [26.6700, 93.8200];
+
+        const marker = L.circleMarker(coords, {
+          radius: 8.5,
+          fillColor: color,
+          color: "#ffffff",
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0.95,
+        }).addTo(map);
+
+        marker.bindPopup(`
+          <div style="min-width:225px; font-family:sans-serif; color:#0f172a; line-height:1.4;">
+            <div style="font-weight:bold; font-size:13px; color:${color}; border-bottom:1px solid #cbd5e1; padding-bottom:3px; margin-bottom:3px;">
+              ${hosp.name}
+            </div>
+            <div style="font-size:11.5px;"><b>Type:</b> ${hosp.type}</div>
+            <div style="font-size:11.5px;"><b>Location:</b> ${hosp.location}</div>
+            <div style="font-size:11.5px;"><b>Beds:</b> ${hosp.bedCapacity} Total (<span style="color:#10b981; font-weight:bold;">${hosp.bedsAvailable} Available</span>)</div>
+            <div style="font-size:11.5px;"><b>Emergency Phone:</b> <a href="tel:${hosp.emergencyContact.replace(/[^0-9+]/g, '')}" style="color:#0284c7; font-weight:bold;">${hosp.emergencyContact}</a></div>
+            <div style="font-size:11px; color:#475569;"><b>Services:</b> ${hosp.medicalServices}</div>
+            <div style="font-size:10px; color:#64748b; margin-top:4px; border-top:1px dashed #e2e8f0; padding-top:2px;">
+              Source: ${hosp.source} | Status: ${hosp.status}
+            </div>
+          </div>
+        `);
+      });
+    }
+
+    // 9. DEFENSES & EMBANKMENT BREACHES LAYER
+    if (layers.defenses) {
+      GOLAGHAT_DEFENSES_GEO.forEach((def) => {
+        const isBreach = def.type === "EMBANKMENT_BREACH";
+        const color = isBreach ? "#dc2626" : "#f59e0b";
+
+        const marker = L.circleMarker(def.coords, {
+          radius: 8,
+          fillColor: color,
+          color: "#ffffff",
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0.95,
+        }).addTo(map);
+
+        marker.bindPopup(`
+          <div style="min-width:210px; font-family:sans-serif; color:#0f172a; line-height:1.4;">
+            <div style="font-weight:bold; font-size:13px; color:${color}; border-bottom:1px solid #cbd5e1; padding-bottom:3px; margin-bottom:3px;">
+              ${def.name}
+            </div>
+            <div style="font-size:11.5px;"><b>River / Circle:</b> ${def.river} (${def.circle})</div>
+            <div style="font-size:11.5px;"><b>Engineering Status:</b> <span style="font-weight:bold; color:${color};">${def.status.replace(/_/g, " ")}</span></div>
+            <div style="font-size:11.5px; margin-top:2px; color:#475569;"><b>Details:</b> ${def.details}</div>
+            <div style="font-size:10px; color:#64748b; margin-top:4px; border-top:1px dashed #e2e8f0; padding-top:2px;">
+              Source: Assam Water Resources Dept (Dhansiri Division)
+            </div>
+          </div>
+        `);
+      });
     }
 
     setTimeout(() => {
       map.invalidateSize();
-    }, 200);
+    }, 250);
 
     return () => {
       map.remove();
       mapInstanceRef.current = null;
     };
-  }, [mapMode, layers, affectedLocations, missingDataMode]);
+  }, [layers, selectedCircle, activeBaseLayer]);
 
   return (
-    <div className="bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl space-y-0">
-      {/* HEADER & VIEW CONTROLS */}
-      <div className="px-5 py-4 border-b border-white/10 bg-[#090E1A]/90 flex flex-wrap items-center justify-between gap-3">
+    <div
+      className={`bg-[#0F172A]/90 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl space-y-0 transition-all ${
+        isFullscreen ? "fixed inset-0 z-50 rounded-none h-screen" : ""
+      }`}
+    >
+      {/* 1. MAP HEADER & OPERATIONAL CONTEXT BAR */}
+      <div className="px-5 py-3.5 border-b border-white/10 bg-[#090E1A]/95 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center">
-            <MapPin className="w-5 h-5 text-cyan-400" />
+          <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center shrink-0">
+            <Compass className="w-5 h-5 text-cyan-400" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-[#E7ECF5]">{title}</h3>
-            <p className="text-[11px] text-[#8B96AC] font-mono">ASSAM FLOOD RESPONSE — DHEMAJI SECTOR GIS GRID</p>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm sm:text-base font-bold text-white tracking-tight">{title}</h3>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-bold hidden sm:inline">
+                Golaghat District GIS
+              </span>
+            </div>
+            <p className="text-xs text-[#8B96AC] font-mono">{subtitle}</p>
           </div>
         </div>
 
-        {/* Mode Selector Buttons */}
+        {/* CONTROLS: BASE LAYER SWITCHER, CIRCLE FILTER & FULLSCREEN */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Base Layer Switcher */}
           <div className="flex items-center gap-1 bg-[#090E1A] border border-white/10 p-1 rounded-xl text-xs font-mono">
-            <button
-              onClick={() => setMapMode("ai")}
-              className={`px-3 py-1 rounded-lg transition-colors ${
-                mapMode === "ai" ? "bg-cyan-500/20 text-cyan-400 font-bold border border-cyan-500/30" : "text-[#7C8AA3] hover:text-[#E7ECF5]"
-              }`}
-            >
-              AI Multi-Layer
-            </button>
-            <button
-              onClick={() => setMapMode("pre")}
-              className={`px-3 py-1 rounded-lg transition-colors ${
-                mapMode === "pre" ? "bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30" : "text-[#7C8AA3] hover:text-[#E7ECF5]"
-              }`}
-            >
-              Pre-Disaster
-            </button>
-            <button
-              onClick={() => setMapMode("post")}
-              className={`px-3 py-1 rounded-lg transition-colors ${
-                mapMode === "post" ? "bg-rose-500/20 text-rose-400 font-bold border border-rose-500/30" : "text-[#7C8AA3] hover:text-[#E7ECF5]"
-              }`}
-            >
-              Post-Disaster
-            </button>
+            {Object.entries(BASE_LAYERS).map(([key, config]) => (
+              <button
+                key={key}
+                onClick={() => setActiveBaseLayer(key)}
+                className={`px-2.5 py-1 rounded-lg transition-all ${
+                  activeBaseLayer === key
+                    ? "bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40"
+                    : "text-[#7C8AA3] hover:text-white"
+                }`}
+              >
+                {config.name.split(" ")[0]}
+              </button>
+            ))}
           </div>
+
+          {/* Revenue Circle Filter */}
+          <select
+            value={selectedCircle}
+            onChange={(e) => setSelectedCircle(e.target.value)}
+            className="bg-[#090E1A] border border-white/15 rounded-xl px-3 py-1.5 text-xs text-[#E7ECF5] font-mono focus:outline-none focus:border-cyan-500/50"
+          >
+            <option value="all">All 5 Revenue Circles</option>
+            <option value="Bokakhat">Bokakhat Circle (Critical)</option>
+            <option value="Golaghat">Golaghat Sadar (Critical)</option>
+            <option value="Khumtai">Khumtai Circle (High)</option>
+            <option value="Dergaon">Dergaon Circle (Moderate)</option>
+            <option value="Morangi">Morangi Circle (Moderate)</option>
+          </select>
+
+          {/* Reset View Button */}
+          <button
+            onClick={handleResetView}
+            className="p-2 rounded-xl bg-[#090E1A] border border-white/10 text-[#7C8AA3] hover:text-white transition-colors"
+            title="Reset to Golaghat Center"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
+
+          {/* Fullscreen Toggle Button */}
+          <button
+            onClick={toggleFullscreen}
+            className="p-2 rounded-xl bg-[#090E1A] border border-white/10 text-[#7C8AA3] hover:text-white transition-colors"
+            title={isFullscreen ? "Exit Fullscreen" : "Fullscreen Map"}
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
         </div>
       </div>
 
-      {/* INTERACTIVE LAYER TOGGLE BAR */}
-      <div className="px-5 py-2.5 bg-[#0F172A]/90 border-b border-white/5 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+      {/* 2. REALISTIC OPERATIONAL STATUS STRIP */}
+      <div className="px-5 py-2 bg-gradient-to-r from-sky-950/80 via-[#0B1324] to-slate-950/80 border-b border-white/5 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+        <div className="flex items-center gap-2 text-cyan-300">
+          <Satellite className="w-4 h-4 text-cyan-400" />
+          <span>
+            <b>Inundation Layer:</b> NRSC / ISRO RISAT-1A SAR (Obs: 22 Aug 2026, 06:30 IST)
+          </span>
+        </div>
+        <div className="text-[11px] text-[#7C8AA3] flex items-center gap-3">
+          <span>Active Layers: <b className="text-cyan-400">{activeLayerCount}</b></span>
+          <span>•</span>
+          <span>Last data update: <b className="text-white">22 Aug 2026, 12:00 IST</b></span>
+        </div>
+      </div>
+
+      {/* 3. INTERACTIVE DATA LAYER TOGGLE STRIP */}
+      <div className="px-5 py-2.5 bg-[#0F172A]/95 border-b border-white/5 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
         <div className="flex items-center gap-2 text-[#8B96AC]">
           <Layers className="w-4 h-4 text-cyan-400" />
-          <span className="font-semibold text-[#E7ECF5]">MAP LAYERS:</span>
+          <span className="font-bold text-white">LAYERS:</span>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {mapMode === "ai" && (
-            <>
-              <button
-                onClick={() => toggleLayer("buildings")}
-                className={`px-2.5 py-1 rounded-lg border flex items-center gap-1.5 transition-all ${
-                  layers.buildings
-                    ? "bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.15)]"
-                    : "bg-[#090E1A] border-white/5 text-[#7C8AA3] opacity-60"
-                }`}
-              >
-                <Eye className="w-3 h-3" /> Buildings ({BUILDINGS.length})
-              </button>
-
-              <button
-                onClick={() => toggleLayer("roads")}
-                className={`px-2.5 py-1 rounded-lg border flex items-center gap-1.5 transition-all ${
-                  layers.roads
-                    ? "bg-rose-500/15 border-rose-500/40 text-rose-300 shadow-[0_0_10px_rgba(244,63,94,0.15)]"
-                    : "bg-[#090E1A] border-white/5 text-[#7C8AA3] opacity-60"
-                }`}
-              >
-                <Eye className="w-3 h-3" /> Blocked Roads ({ROADS.length})
-              </button>
-            </>
-          )}
-
           <button
-            onClick={() => toggleLayer("flood")}
-            className={`px-2.5 py-1 rounded-lg border flex items-center gap-1.5 transition-all ${
-              layers.flood
-                ? "bg-cyan-500/15 border-cyan-500/40 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.15)]"
+            onClick={() => toggleLayer("inundation")}
+            className={`px-3 py-1 rounded-lg border flex items-center gap-1.5 transition-all ${
+              layers.inundation
+                ? "bg-rose-500/20 border-rose-500/40 text-rose-300 font-bold"
                 : "bg-[#090E1A] border-white/5 text-[#7C8AA3] opacity-60"
             }`}
           >
-            <Eye className="w-3 h-3" /> Flood Inundation
+            <Eye className="w-3 h-3" /> Inundation Extent
           </button>
 
           <button
-            onClick={() => toggleLayer("campsAndHospitals")}
-            className={`px-2.5 py-1 rounded-lg border flex items-center gap-1.5 transition-all ${
-              layers.campsAndHospitals
-                ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.15)]"
+            onClick={() => toggleLayer("circles")}
+            className={`px-3 py-1 rounded-lg border flex items-center gap-1.5 transition-all ${
+              layers.circles
+                ? "bg-amber-500/20 border-amber-500/40 text-amber-300 font-bold"
                 : "bg-[#090E1A] border-white/5 text-[#7C8AA3] opacity-60"
             }`}
           >
-            <Eye className="w-3 h-3" /> Hospitals & Camps ({HOSPITALS_AND_CAMPS.length})
+            <Eye className="w-3 h-3" /> Revenue Circles ({GOLAGHAT_CIRCLES_GEO.length})
           </button>
 
           <button
-            onClick={() => toggleLayer("telemetry")}
-            className={`px-2.5 py-1 rounded-lg border flex items-center gap-1.5 transition-all ${
-              layers.telemetry
-                ? "bg-violet-500/15 border-violet-500/40 text-violet-300 shadow-[0_0_10px_rgba(139,92,246,0.15)]"
+            onClick={() => toggleLayer("rivers")}
+            className={`px-3 py-1 rounded-lg border flex items-center gap-1.5 transition-all ${
+              layers.rivers
+                ? "bg-sky-500/20 border-sky-500/40 text-sky-300 font-bold"
                 : "bg-[#090E1A] border-white/5 text-[#7C8AA3] opacity-60"
             }`}
           >
-            <Eye className="w-3 h-3" /> Stream Gauges
+            <Eye className="w-3 h-3" /> Rivers ({GOLAGHAT_RIVERS.length})
+          </button>
+
+          <button
+            onClick={() => toggleLayer("gauges")}
+            className={`px-3 py-1 rounded-lg border flex items-center gap-1.5 transition-all ${
+              layers.gauges
+                ? "bg-red-500/20 border-red-500/40 text-red-300 font-bold"
+                : "bg-[#090E1A] border-white/5 text-[#7C8AA3] opacity-60"
+            }`}
+          >
+            <Eye className="w-3 h-3" /> Gauges ({GOLAGHAT_GAUGES_GEO.length})
+          </button>
+
+          <button
+            onClick={() => toggleLayer("roads")}
+            className={`px-3 py-1 rounded-lg border flex items-center gap-1.5 transition-all ${
+              layers.roads
+                ? "bg-violet-500/20 border-violet-500/40 text-violet-300 font-bold"
+                : "bg-[#090E1A] border-white/5 text-[#7C8AA3] opacity-60"
+            }`}
+          >
+            <Eye className="w-3 h-3" /> Roads & Closures
+          </button>
+
+          <button
+            onClick={() => toggleLayer("facilities")}
+            className={`px-3 py-1 rounded-lg border flex items-center gap-1.5 transition-all ${
+              layers.facilities
+                ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300 font-bold"
+                : "bg-[#090E1A] border-white/5 text-[#7C8AA3] opacity-60"
+            }`}
+          >
+            <Eye className="w-3 h-3" /> Relief Camps (5)
+          </button>
+
+          <button
+            onClick={() => toggleLayer("hospitals")}
+            className={`px-3 py-1 rounded-lg border flex items-center gap-1.5 transition-all ${
+              layers.hospitals
+                ? "bg-pink-500/20 border-pink-500/40 text-pink-300 font-bold"
+                : "bg-[#090E1A] border-white/5 text-[#7C8AA3] opacity-60"
+            }`}
+          >
+            <Eye className="w-3 h-3" /> Hospitals ({GOLAGHAT_HOSPITALS.length})
+          </button>
+
+          <button
+            onClick={() => toggleLayer("defenses")}
+            className={`px-3 py-1 rounded-lg border flex items-center gap-1.5 transition-all ${
+              layers.defenses
+                ? "bg-cyan-500/20 border-cyan-500/40 text-cyan-300 font-bold"
+                : "bg-[#090E1A] border-white/5 text-[#7C8AA3] opacity-60"
+            }`}
+          >
+            <Eye className="w-3 h-3" /> Dyke Armoring ({GOLAGHAT_DEFENSES_GEO.length})
           </button>
         </div>
       </div>
 
-      {/* MAP CONTAINER */}
-      <div ref={mapRef} style={{ width: "100%", height: "480px" }} className="z-10" />
+      {/* 4. LEAFLET MAP CONTAINER */}
+      <div
+        ref={mapRef}
+        style={{ width: "100%", height: isFullscreen ? "calc(100vh - 150px)" : height }}
+        className="z-10 bg-[#0B1324]"
+      />
 
-      {/* LEGEND FOOTER */}
+      {/* 5. LEGEND & COORDINATES FOOTER */}
       <div className="px-5 py-3 bg-[#090E1A] border-t border-white/10 text-[11px] font-mono flex flex-wrap gap-4 items-center justify-between">
         <div className="flex flex-wrap gap-3.5 items-center">
-          <span className="text-[#7C8AA3] font-semibold">LEGEND:</span>
-          {mapMode === "ai" && (
-            <>
-              <span className="text-rose-400">■ SEVERE DAMAGE</span>
-              <span className="text-orange-400">■ HIGH</span>
-              <span className="text-yellow-400">■ MODERATE</span>
-              <span className="text-emerald-400">■ LOW</span>
-              <span className="text-rose-400">━ BLOCKED ROAD</span>
-              <span className="text-orange-400">━ PARTIAL</span>
-              <span className="text-emerald-400">━ OPEN</span>
-              <span className="text-pink-400">● HOSPITAL</span>
-              <span className="text-emerald-400">● RELIEF CAMP</span>
-            </>
-          )}
+          <span className="text-[#7C8AA3] font-bold">STATUS LEGEND:</span>
+          <span className="text-emerald-400 flex items-center gap-1">● Operational</span>
+          <span className="text-amber-400 flex items-center gap-1">● Warning / Restricted</span>
+          <span className="text-rose-400 flex items-center gap-1">● Critical / Above Danger</span>
+          <span className="text-pink-400 flex items-center gap-1">● Referral Hospital</span>
+          <span className="text-cyan-400 flex items-center gap-1">● Active Dyke Armoring</span>
         </div>
 
-        {missingDataMode && (
-          <span className="text-rose-400 flex items-center gap-1 animate-pulse font-bold">
-            <ShieldAlert className="w-3.5 h-3.5" /> Sensor Outage Interpolation Active
-          </span>
-        )}
+        <div className="text-[#7C8AA3] flex items-center gap-3">
+          <span>Lat: <b className="text-white">{mouseCoords.lat}°N</b></span>
+          <span>Lng: <b className="text-white">{mouseCoords.lng}°E</b></span>
+          <span className="text-cyan-400 hidden sm:inline">Datum: WGS-84</span>
+        </div>
       </div>
     </div>
   );
